@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import 'package:project_complexity_calculator/pages/new_project_page.dart';
+import 'package:project_complexity_calculator/pages/add_new_activity.dart';
+import 'package:project_complexity_calculator/pages/project_result.dart';
 
 
 void main() {
@@ -16,6 +18,7 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
+        debugShowCheckedModeBanner : false,
         title: 'Flutter Demo',
         theme: ThemeData(
             brightness: Brightness.light,
@@ -25,7 +28,7 @@ class MyApp extends StatelessWidget {
         //home: ,
         routes: {
           '/': (BuildContext context) => NewProjectPage(),
-          //  '/movies_list': (BuildContext context) => MoviesPage(),
+          '/add_new_activity': (BuildContext context) => NewActivityPage(),
         });
   }
 }

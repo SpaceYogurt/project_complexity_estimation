@@ -1,194 +1,262 @@
+import 'dart:math';
+
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
+import 'package:project_complexity_calculator/model.dart';
+import 'package:project_complexity_calculator/pages/project_result.dart';
+import 'package:project_complexity_calculator/widgets/dialogs.dart';
 
 class NewProjectPage extends StatefulWidget {
-  final String title = "New Project";
-
-  //final String title = "Project Evaluation and Review Technique";
+  final String title = "Рассчёт трудоёмкости проекта";
 
   NewProjectPage({Key key}) : super(key: key);
 
   @override
-  _NewProjectPageState createState() =>
-      _NewProjectPageState();
+  _NewProjectPageState createState() => _NewProjectPageState();
 }
 
-class _NewProjectPageState
-    extends State<NewProjectPage> {
-  final Map<String, dynamic> _formData = {
-    'kUI': null,
-    'kAct': null,
+class _NewProjectPageState extends State<NewProjectPage> {
+  final List<Activity> activities = <Activity>[];
+  String _resultLabelText = "";
+  String _warningLabelText = "";
+
+  final Map<String, dynamic> _projectFormData = {
+    'name': null,
+    'desc': null,
   };
 
-  final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
+  Dialogs dialogs = new Dialogs();
+  final GlobalKey<FormState> _projectFormKey = GlobalKey<FormState>();
 
-  String _resultLabelText = "";
   final _uiTextController = TextEditingController();
   final _actTextController = TextEditingController();
 
-  Widget _buildDescriptionTextContainer() {
-    return Container(
-      child: Text("Project's parameters",
-          textAlign: TextAlign.center,
-          style: TextStyle(fontWeight: FontWeight.w500, fontSize: 18)),
-    );
-  }
-
-  Widget _buildUiTextField() {
-    return TextFormField(
-      keyboardType: TextInputType.number,
-      inputFormatters: [WhitelistingTextInputFormatter.digitsOnly],
-      controller: _uiTextController,
-      decoration: InputDecoration(labelText: 'UI'),
-      validator: (String value) {
-        if (value.isEmpty || !_isANumber(value)) {
-          return 'Please enter a number';
-        }
-      },
-      onSaved: (String value) {
-        _formData['kUI'] = value;
-      },
-    );
-  }
-
-  Widget _buildActTextField() {
-    return TextFormField(
-      keyboardType: TextInputType.number,
-      inputFormatters: [WhitelistingTextInputFormatter.digitsOnly],
-      controller: _actTextController,
-      decoration: InputDecoration(labelText: 'Act'),
-      validator: (String value) {
-        if (value.isEmpty || !_isANumber(value)) {
-          return 'Please enter a number';
-        }
-      },
-      onSaved: (String value) {
-        _formData['kAct'] = value;
-      },
-    );
-  }
-
-  void _onUiChange() {}
-
   Widget _buildResultTextContainer() {
-    return Container(
-        child: _resultLabelText.isEmpty
-            ? Text("You will see calculation result here...",
-                style: TextStyle(color: Colors.grey.withOpacity(0.6)))
-            : Text("Project duration is " + _resultLabelText,
-                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 25)));
-  }
-
-  bool _isANumber(value) {
-    return RegExp(r'[!@#<>?":_`~;[\]\\|=+)(*&^%0-9-]').hasMatch(value);
+    if (_resultLabelText.isEmpty) {
+      return Center(
+          child: Text("You will see calculation result here...",
+              style: TextStyle(color: Colors.grey.withOpacity(0.6))));
+    } else
+      return Center(
+          child: Text("Project duration is " + _resultLabelText,
+              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 25)));
   }
 
   void _showResult() {
+    var Es = <double>[];
+    var CKOs = <double>[];
+    activities.forEach((act) {
+      var Ei = (act.from + 4 * act.probably + act.to) / 6;
+      print(act.name + " " + Ei.toString());
+      var CKOi = (act.to - act.from) / 6;
+      print(act.name + " " + CKOi.toString());
+      Es.add(Ei);
+      CKOs.add(CKOi);
+    });
+
+    double resultE = 0.0;
+    Es.forEach((Ei) {
+      resultE += Ei;
+    });
+
+    double resultCKO = 0.0;
+    CKOs.forEach((CKOi) {
+      resultCKO += CKOi * CKOi;
+    });
+
+    double duration = (resultE + 2 * sqrt(resultCKO));
+
     setState(() {
-      if (_uiTextController.text.isEmpty || _actTextController.text.isEmpty) {
-        _clearResult();
-      } else {
-        int result = int.parse(_uiTextController.text) +
-            int.parse(_actTextController.text);
-        print("duration is " + result.toString());
-        _resultLabelText = result.toString();
-      }
+      if (duration != 0.0) {
+        _resultLabelText = (resultE + 2 * sqrt(resultCKO)).toString();
+      } else {}
     });
   }
 
-  void _clearResult() {
-    _resultLabelText = "";
-  }
-
-  void _clearAndShowResult() {
-    _clearResult();
-    _showResult();
-  }
-
-  Widget _buildPageContent(BuildContext context) {
-    // TODO some padding and alignment depending on the device display's parameters
-
-    final double deviceWidth = MediaQuery.of(context).size.width;
-    final double targetWidth = deviceWidth > 550.0 ? 500.0 : deviceWidth * 0.95;
-    final double targetPadding = deviceWidth - targetWidth;
-
-    return Row(
-      children: <Widget>[
-        Expanded(
-          flex: 1, // 20%
-          child: Container(),
-        ),
-        Expanded(
-          flex: 8, // 60%
-          child: Container(
-            margin: EdgeInsets.all(10.0),
-            child: Form(
-              key: _formKey,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.center,
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: <Widget>[
-                  _buildDescriptionTextContainer(),
-                  SizedBox(
-                    height: 10.0,
-                  ),
-                  _buildUiTextField(),
-                  _buildActTextField(),
-                  SizedBox(
-                    height: 10.0,
-                  ),
-                  RaisedButton(
-                    child: Text('Calculate'),
-                    textColor: Colors.white,
-                    onPressed: _submitForm,
-                  ),
-                  SizedBox(
-                    height: 50.0,
-                  ),
-                  _buildResultTextContainer(),
-                ],
-              ),
-            ),
-          ),
-        ),
-        Expanded(
-          flex: 1, // 20%
-          child: Container(),
-        )
-      ],
+  Widget _buildNameTextField() {
+    return TextFormField(
+      //keyboardType: TextInputType.,
+      //controller: _uiTextController,
+      decoration: InputDecoration(labelText: 'Имя проекта'),
+      validator: (String value) {
+        if (value.isEmpty || value.length > 20) {
+          return 'Введите имя длиной не более 20 символов';
+        }
+      },
+      onSaved: (String value) {
+        _projectFormData['name'] = value;
+      },
     );
   }
 
-  Widget _buildPageContent1(BuildContext context) {
-    return Column(
+  Widget _buildDescTextField() {
+    return TextFormField(
+      decoration: InputDecoration(labelText: 'Краткое описание'),
+      validator: (String value) {
+        if (value.isEmpty || value.length > 30) {
+          return 'Введите краткое описание длиной не более 30 символов';
+        }
+      },
+      onSaved: (String value) {
+        _projectFormData['desc'] = value;
+      },
+    );
+  }
+
+  Widget _buildPageContent(BuildContext context) {
+    return ListView(
       children: <Widget>[
         Container(
-          margin: EdgeInsets.all(50.0),
+          margin: EdgeInsets.all(20.0),
           child: Center(
-            child: Text("Project's parameters",
+            child: Text("Параметры проекта",
                 textAlign: TextAlign.center,
                 style: TextStyle(fontWeight: FontWeight.w500, fontSize: 18)),
           ),
         ),
         Padding(
-          padding: const EdgeInsets.all(0.0),
-          child: Container(
-            //margin: EdgeInsets.all(10.0),
-            child: bodyData(),
+          padding: const EdgeInsets.only(left: 10.0, right: 10.0, bottom: 40.0),
+          child: Form(
+              key: _projectFormKey,
+              child: Column(
+                children: <Widget>[
+                  _buildNameTextField(),
+                  _buildDescTextField(),
+                ],
+              )),
+        ),
+        Center(
+          // margin: EdgeInsets.all(0.0),
+          child: Text("Задачи",
+              textAlign: TextAlign.left,
+              style: TextStyle(fontWeight: FontWeight.w500, fontSize: 18)),
+        ),
+        activities.isEmpty
+            ? Column(
+                children: <Widget>[
+                  SizedBox(
+                    height: 10,
+                  ),
+                  Center(
+                    child: Text(
+                      "Нажмите на \"Плюс\" чтобы добавить новую задачу",
+                      style: TextStyle(color: Colors.grey),
+                    ),
+                  ),
+                ],
+              )
+            : Padding(
+                padding: const EdgeInsets.all(0.0),
+                child: Column(
+                  children: <Widget>[
+                    Container(
+                      //margin: EdgeInsets.all(10.0),
+                      child: bodyData(),
+                    ),
+                  ],
+                ),
+              ),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: <Widget>[
+            IconButton(
+              icon: Icon(
+                Icons.add,
+                color: Colors.green,
+              ),
+              onPressed: () {
+                _addNewActivity(context);
+              },
+            ),
+            activities.isEmpty
+                ? Container()
+                : Container(
+                    child: IconButton(
+                      icon: Icon(Icons.delete),
+                      onPressed: () {
+                        setState(() {
+                          activities.removeLast();
+                        });
+                      },
+                    ),
+                  )
+          ],
+        ),
+        Container(
+          child: Text(
+            _warningLabelText,
+            style: TextStyle(color: Colors.red),
           ),
         ),
+        SizedBox(
+          height: 40.0,
+        ),
+        Container(
+          //margin: EdgeInsets.all(20.0),
+          child: Center(
+            child: RaisedButton(
+                child: Text(
+                  "Посчитать",
+                  style: TextStyle(color: Colors.black),
+                ),
+                onPressed: _calculateProject),
+          ),
+        ),
+        SizedBox(
+          height: 85.0,
+        ),
+        //_buildResultTextContainer()
       ],
     );
   }
 
-  void _submitForm() {
-    if (!_formKey.currentState.validate()) {
-      _clearResult();
-      _showResult();
-      return;
+  void _addNewActivity(BuildContext context) async {
+    final Object result =
+        await Navigator.pushNamed(context, "/add_new_activity");
+    if (result != null) {
+      var bar = result as Map<String, dynamic>;
+      setState(() {
+        activities.add(new Activity(
+            name: bar["name"],
+            from: bar["from"],
+            to: bar["to"],
+            probably: bar["probably"]));
+      });
     }
-    _formKey.currentState.save();
-    _showResult();
+    //dialogs.addNewActivity(context);
+    /*setState(() {
+      acts.add(new Activity(
+          name: "Act1", from: 2, to: 4, probably: 3));
+    });*/
+  }
+
+  void _calculateProject() {
+    if (activities.isEmpty) {
+      showDialog(
+          context: context,
+          builder: (BuildContext context) {
+            return AlertDialog(
+              title: Text("Подсчёт трудоёмкости не удался"),
+              content: Padding(
+                padding: const EdgeInsets.all(20.0),
+                child: Text("Пожалуйста,добавьте задачи к проекту"),
+              ),
+            );
+          });
+      // _warningLabelText = "Please add some activities";
+    } else {
+      if (_projectFormKey.currentState.validate()) {
+        Navigator.push(
+            context,
+            MaterialPageRoute(
+                builder: (context) => ProjectResultPage(project: Project(
+                    name: _projectFormData["name"],
+                    desc: _projectFormData["desc"],
+                    activities: activities))));
+      } else {
+        print("invalid project");
+        _showResult();
+      }
+    }
   }
 
   Widget bodyData() {
@@ -199,72 +267,73 @@ class _NewProjectPageState
         columns: <DataColumn>[
           DataColumn(
             label: Text(
-                "Name",
-                textAlign: TextAlign.center,),
+              "Имя",
+              textAlign: TextAlign.center,
+            ),
             numeric: false,
             onSort: (i, b) {
               print("$i $b");
               setState(() {
-                acts.sort((a, b) => a.name.compareTo(b.name));
+                activities.sort((a, b) => a.name.compareTo(b.name));
               });
             },
             //tooltip: "To display  name of the Name",
           ),
           DataColumn(
-            label: Flexible(child: Text("From")),
+            label: Flexible(child: Text("От")),
             numeric: false,
             onSort: (i, b) {
               print("$i $b");
               setState(() {
-                acts.sort((a, b) => a.from.compareTo(b.from));
+                activities.sort((a, b) => a.from.compareTo(b.from));
               });
             },
             //tooltip: "To display last name of the Name",
           ),
           DataColumn(
-            label: Flexible(child: Text("To")),
+            label: Flexible(child: Text("До")),
             numeric: false,
             onSort: (i, b) {
               print("$i $b");
               setState(() {
-                acts.sort((a, b) => a.to.compareTo(b.to));
+                activities.sort((a, b) => a.to.compareTo(b.to));
               });
             },
             //tooltip: "To display last name of the Name",
           ),
           DataColumn(
-            label: Flexible(child: Text("Probably")),
+            label: Flexible(child: Text("Вероятно")),
             numeric: false,
             onSort: (i, b) {
               print("$i $b");
               setState(() {
-                acts.sort((a, b) => a.probably.compareTo(b.probably));
+                activities.sort((a, b) => a.probably.compareTo(b.probably));
               });
             },
             //tooltip: "To display last name of the Name",
           ),
         ],
-        rows: acts
+        rows: activities
             .map(
-              (acts) => DataRow(
+              (act) => DataRow(
                     cells: [
                       DataCell(
-                        Text(acts.name),
+                        Text(act.name),
                         showEditIcon: false,
                         placeholder: false,
                       ),
                       DataCell(
-                        Text(acts.from.toString()),
+                        Text(act.from.toString()),
                         showEditIcon: false,
                         placeholder: false,
                       ),
                       DataCell(
-                        Text(acts.to.toString()),
+                        Text(act.to.toString()),
                         showEditIcon: false,
                         placeholder: false,
                       ),
                       DataCell(
-                        Text(acts.probably.toString()),
+                        Text(act.probably.toString()),
                         showEditIcon: false,
                         placeholder: false,
                       )
@@ -276,29 +345,14 @@ class _NewProjectPageState
 
   @override
   Widget build(BuildContext context) {
-    final Widget pageContent = _buildPageContent(context);
     return Scaffold(
       appBar: AppBar(
         title: Text(widget.title),
       ),
+      resizeToAvoidBottomPadding: false,
       body: Container(
-        child: _buildPageContent1(context),
+        child: _buildPageContent(context),
       ),
     );
   }
 }
-
-class Activity {
-  String name;
-  int from;
-  int to;
-  int probably;
-
-  Activity({this.name, this.from,this.to,this.probably});
-}
-
-var acts = <Activity>[
-  Activity(name: "UI", from: 1, to: 3, probably: 2),
-  Activity(name: "Act", from: 2, to: 2, probably: 3),
-  Activity(name: "Business obj", from: 3, to: 1, probably: 1),
-];
